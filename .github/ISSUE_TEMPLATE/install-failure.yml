@@ -1,0 +1,42 @@
+name: 安装失败
+description: install.sh 运行过程中出错
+labels: ["bug", "install"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先运行 `bash collect-debug.sh` 并粘贴输出结果。
+  - type: textarea
+    id: debug
+    attributes:
+      label: Debug Bundle 输出
+      description: 运行 bash collect-debug.sh，将输出粘贴在这里
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: 问题描述
+      description: 安装到哪一步出错了？错误信息是什么？
+    validations:
+      required: true
+  - type: input
+    id: network
+    attributes:
+      label: 网络环境
+      description: 中国大陆 / 海外 / 公司内网 / 其他
+      placeholder: 中国大陆
+    validations:
+      required: true
+  - type: input
+    id: memory
+    attributes:
+      label: 内存大小
+      placeholder: 运行 free -h | grep Mem | awk '{print $2}'
+  - type: textarea
+    id: logs
+    attributes:
+      label: 安装日志（可选）
+      description: 如果有安装时的完整终端输出，请粘贴在这里
+      render: shell

@@ -1,0 +1,29 @@
+name: 使用困惑
+description: 不知道某个功能怎么用，或者界面上有什么看不懂
+labels: ["ux"]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: 你卡在哪了？
+      description: 你当时想做什么？实际发生了什么？
+      placeholder: |
+        我打开了 Dashboard，然后...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 相关区域
+      options:
+        - 安装过程
+        - Dashboard 页面
+        - 模型安装
+        - 聊天界面
+        - 删除模型
+        - 其他
+  - type: input
+    id: suggestion
+    attributes:
+      label: 你觉得怎样会更好？（可选）
+      description: 你期望它应该怎么工作？

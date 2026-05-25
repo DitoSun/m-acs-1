@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: FAQ
+    url: https://github.com/DitoSun/m-acs-1/blob/master/FAQ.md
+    about: 安装和使用的常见问题
+  - name: Known Issues
+    url: https://github.com/DitoSun/m-acs-1/blob/master/KNOWN_ISSUES.md
+    about: 当前版本已知限制

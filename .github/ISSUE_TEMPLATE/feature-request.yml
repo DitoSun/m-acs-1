@@ -1,0 +1,28 @@
+name: 功能建议
+description: 希望 M-ACS-1 支持什么新功能
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 你想解决什么问题？
+      description: 描述你遇到的实际场景
+      placeholder: |
+        我每次都要...
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: 你希望的解决方案
+      description: 描述你期望的功能
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: 对你来说这个功能有多重要？
+      options:
+        - 非常需要（没有它用不了）
+        - 比较需要（提升体验）
+        - 锦上添花（有了更好）

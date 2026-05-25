@@ -1,0 +1,35 @@
+[Unit]
+Description=M-ACS-1 GPU Metrics Collector
+Documentation=https://github.com/xxx/m-acs-1
+After=network.target nvidia-persistenced.service
+
+[Service]
+Type=simple
+ExecStart=/opt/m-acs-1/host-agent/collector.py
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+# Sandboxing
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+ReadWritePaths=/opt/m-acs-1/data
+CapabilityBoundingSet=
+AmbientCapabilities=
+
+# Resource accounting
+CPUAccounting=on
+MemoryAccounting=on
+
+# Limits
+LimitNOFILE=1024
+
+# Logging (journald)
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

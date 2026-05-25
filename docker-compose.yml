@@ -1,0 +1,54 @@
+services:
+  ollama:
+    image: ollama/ollama:0.3.12
+    runtime: nvidia
+    ports:
+      - "11434:11434"
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+    volumes:
+      - ollama_data:/root/.ollama
+    restart: unless-stopped
+
+  # open-webui:
+  #   image: ghcr.io/open-webui/open-webui:v0.4.0
+  #   ports:
+  #     - "127.0.0.1:3000:8080"
+  #   environment:
+  #     - OLLAMA_BASE_URL=http://ollama:11434
+  #     - WEBUI_AUTH=false
+  #   volumes:
+  #     - webui_data:/app/backend/data
+  #   restart: unless-stopped
+  #   depends_on:
+  #     - ollama
+
+  control-plane:
+    build: ./control-plane
+    ports:
+      - "8080:8080"
+    environment:
+      - OLLAMA_URL=http://ollama:11434
+      - GPU_METRICS_FILE=/data/gpu.json
+      - METRICS_STALE_SECONDS=5
+    volumes:
+      - host_metrics:/data:ro
+    depends_on:
+      - ollama
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  ollama_data:
+  # webui_data:
+  host_metrics:
+    driver: local
+    driver_opts:
+      type: none
+      device: /opt/m-acs-1/data
+      o: bind

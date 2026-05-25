@@ -6,7 +6,7 @@
 
 ```
 裸 Ubuntu 机器
-    ↓ curl xxx | bash
+    ↓ git clone && sudo ./install.sh
     ↓ ~15 分钟
 浏览器打开 http://localhost:8080
     ↓ 点一下装模型
@@ -41,7 +41,7 @@
 ### 安装
 
 ```bash
-git clone https://github.com/xxx/m-acs-1.git
+git clone https://github.com/DitoSun/m-acs-1.git
 cd m-acs-1
 sudo ./install.sh
 ```
@@ -86,7 +86,6 @@ sudo ./install.sh
 |---|---|
 | 操作系统 | Ubuntu 22.04 或 24.04 LTS |
 | 显卡 | NVIDIA GeForce RTX 20/30/40 系列 |
-|  | NVIDIA RTX A 系列、A100、H100 |
 | 内存 | 建议 16 GB 以上 |
 | 硬盘 | 建议 50 GB 以上可用空间 |
 | 网络 | 首次安装需联网 |

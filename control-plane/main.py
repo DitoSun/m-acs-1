@@ -2,7 +2,7 @@ import json as _json
 import logging
 import os
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse, FileResponse
 from starlette.background import BackgroundTask
 from config import config
@@ -103,6 +103,102 @@ def pull_model(data: dict):
             yield f"data: {_json.dumps({'type': 'error', 'message': str(e)})}\n\n"
 
     return StreamingResponse(events(), media_type="text/event-stream")
+
+
+# ── Document RAG API ──
+import tempfile
+import os as _os
+
+RAG_DB = config.RAG_DB_PATH
+
+
+@app.post("/api/documents/upload")
+async def upload_document(file: UploadFile = File(...)):
+    """Upload a PDF for ingestion."""
+    if not file.filename.lower().endswith(".pdf"):
+        raise HTTPException(status_code=400, detail="仅支持 PDF 文件")
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+    try:
+        content = await file.read()
+        tmp.write(content)
+        tmp.close()
+
+        from rag.store import ingest_file
+        result = ingest_file(tmp.name, RAG_DB, config.OLLAMA_URL, filename=file.filename)
+        return result
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("ingestion failed")
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        _os.unlink(tmp.name)
+
+
+@app.get("/api/documents")
+def list_documents():
+    """List ingested documents."""
+    from rag.store import list_files
+    return {"files": list_files(RAG_DB)}
+
+
+@app.delete("/api/documents/{doc_id}")
+def delete_document(doc_id: int):
+    """Delete a document and all its chunks."""
+    from rag.store import delete_file
+    delete_file(RAG_DB, doc_id)
+    return {"status": "deleted"}
+
+
+@app.post("/api/documents/ask")
+def ask_documents(data: dict):
+    """Ask a question against ingested documents."""
+    question = data.get("question", "").strip()
+    if not question:
+        raise HTTPException(status_code=400, detail="question is required")
+    file_ids = data.get("file_ids")  # optional
+
+    from rag.retriever import retrieve, format_context, format_sources
+
+    try:
+        chunks = retrieve(RAG_DB, config.OLLAMA_URL, question, file_ids)
+    except Exception as e:
+        logger.exception("retrieval failed")
+        raise HTTPException(status_code=500, detail=str(e))
+
+    if not chunks:
+        return {"answer": "未找到相关文档内容", "sources": []}
+
+    context = format_context(chunks)
+    prompt = (
+        "你是一个专业文档分析助手。基于以下文档内容回答用户问题。\n"
+        "如果文档中没有相关信息，请明确说'文档中未提及'，不要编造。\n"
+        "回答时请引用具体的文件名称和页码。\n\n"
+        f"文档内容：\n{context}\n\n"
+        f"问题：{question}\n---"
+    )
+
+    # Call Ollama
+    import httpx
+    try:
+        resp = httpx.post(
+            f"{config.OLLAMA_URL}/api/chat",
+            json={
+                "model": data.get("model", "qwen2.5:0.5b"),
+                "messages": [{"role": "user", "content": prompt}],
+                "stream": False,
+            },
+            timeout=120,
+        )
+        resp.raise_for_status()
+        answer = resp.json()["message"]["content"]
+    except Exception as e:
+        logger.exception("ollama chat failed")
+        raise HTTPException(status_code=503, detail=f"AI Engine error: {e}")
+
+    sources = format_sources(chunks)
+    return {"answer": answer, "sources": sources}
 
 
 # Proxy remaining /api/* and /v1/* to Ollama

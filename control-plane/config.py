@@ -15,5 +15,9 @@ class _Config:
     HOST: str = os.getenv("CONTROL_PLANE_HOST", "0.0.0.0")
     PORT: int = int(os.getenv("CONTROL_PLANE_PORT", "8080"))
 
+    # -- RAG --
+    RAG_DB_PATH: str = os.getenv("RAG_DB_PATH", "/data/rag.db")
+    RAG_EMBED_MODEL: str = os.getenv("RAG_EMBED_MODEL", "bge-m3")
+
 
 config = _Config()

@@ -144,6 +144,43 @@ body {
 .pull-bar { height: 4px; background: #e8e8ed; border-radius: 2px; overflow: hidden; }
 .pull-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width .3s; }
 
+/* Documents */
+.doc-upload-area {
+  border: 1px dashed var(--border); border-radius: var(--radius);
+  padding: 20px; text-align: center; cursor: pointer;
+  background: #f5f5f7; transition: border-color .15s, background .15s;
+}
+.doc-upload-area:hover { border-color: var(--accent); background: #f0f5ff; }
+.doc-upload-icon { font-size: 20px; color: var(--muted); display: block; margin-bottom: 4px; }
+.doc-upload-text { font-size: 11px; color: var(--muted); }
+.doc-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 10px; border-radius: 6px; font-size: 12px; margin-bottom: 3px;
+  border: 1px solid transparent; transition: background .1s;
+}
+.doc-item:hover { background: #f5f5f7; border-color: var(--border); }
+.doc-icon { font-size: 14px; }
+.doc-name { font-weight: 500; flex: 1; }
+.doc-status { font-size: 10px; padding: 1px 6px; border-radius: 3px; }
+.doc-status.ready { background: #e8f5e9; color: #2e7d32; }
+.doc-status.processing { background: #fff3e0; color: #e65100; }
+.doc-status.failed { background: #fbe9e7; color: #c62828; }
+.doc-del { color: var(--muted); cursor: pointer; background: none; border: none; font-size: 13px; padding: 2px 4px; border-radius: 4px; }
+.doc-del:hover { color: var(--red); background: rgba(255,95,87,0.08); }
+.doc-answer {
+  background: #f5f5f7; border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 10px 12px; font-size: 12px; line-height: 1.6; margin-top: 8px; white-space: pre-wrap;
+}
+.doc-source {
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+  padding: 8px 10px; font-size: 11px; margin-top: 4px; cursor: pointer; transition: border-color .15s;
+}
+.doc-source:hover { border-color: var(--accent); }
+.doc-source-header { display: flex; align-items: center; justify-content: space-between; font-weight: 500; }
+.doc-source-snippet { color: var(--muted); font-size: 11px; margin-top: 4px; display: none; white-space: pre-wrap; }
+.doc-source-snippet.show { display: block; }
+.doc-empty { color: var(--muted); font-size: 12px; text-align: center; padding: 20px 0; }
+
 /* Chat */
 .chat-area { display: none; }
 .chat-area.show { display: block; }
@@ -258,6 +295,34 @@ body {
 			<div class="custom-install">
 				<input class="custom-input" id="pull-input" placeholder="Other model name..." />
 				<button class="custom-btn" id="pull-btn" onclick="pullModel()">Install</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- Documents -->
+	<div class="panel">
+		<div class="panel-header">
+			<span>Documents</span>
+			<button class="chat-toggle" onclick="document.getElementById('doc-upload').click()">Upload PDF</button>
+		</div>
+		<div class="panel-body">
+			<div class="doc-upload">
+				<input type="file" id="doc-upload" accept=".pdf" style="display:none" onchange="uploadDoc(this)" />
+				<div class="doc-upload-area" onclick="document.getElementById('doc-upload').click()">
+					<span class="doc-upload-icon">+</span>
+					<span class="doc-upload-text">Drop PDF here or click to browse</span>
+				</div>
+			</div>
+			<div id="doc-list" class="loading">No documents uploaded</div>
+			<div id="doc-ask-area" style="display:none">
+				<div style="margin-top:10px;border-top:1px solid var(--border);padding-top:10px">
+					<div class="chat-input-row">
+						<input class="chat-input" id="doc-query" placeholder="Ask about your documents..." />
+						<button class="chat-send" id="doc-ask-btn" onclick="askDocs()">Ask</button>
+					</div>
+					<div id="doc-answer"></div>
+					<div id="doc-sources"></div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -592,12 +657,119 @@ function appendMsg(role, text) {
 	return div;
 }
 
+/* ── Documents ── */
+async function refreshDocs() {
+	try {
+		const r = await fetch('/api/documents');
+		if (!r.ok) throw new Error(r.status);
+		const data = await r.json();
+		const files = data.files || [];
+		const el = document.getElementById('doc-list');
+
+		if (!files.length) {
+			el.innerHTML = '<div class="doc-empty">No documents uploaded</div>';
+			document.getElementById('doc-ask-area').style.display = 'none';
+			return;
+		}
+
+		document.getElementById('doc-ask-area').style.display = 'block';
+
+		el.innerHTML = files.map(f => {
+			const statusClass = f.status === 'ready' ? 'ready' : f.status === 'processing' ? 'processing' : 'failed';
+			const statusLabel = f.status === 'ready' ? 'ready' : f.status === 'processing' ? 'indexing...' : f.status;
+			return '<div class="doc-item">' +
+				'<span class="doc-icon">📄</span>' +
+				'<span class="doc-name">' + esc(f.name) + '</span>' +
+				'<span class="doc-status ' + statusClass + '">' + statusLabel + '</span>' +
+				'<button class="doc-del" onclick="deleteDoc(' + f.id + ')" title="Delete">✕</button>' +
+				'</div>';
+		}).join('');
+	} catch { /* ignore */ }
+}
+
+async function uploadDoc(input) {
+	const file = input.files[0];
+	if (!file) return;
+	const form = new FormData();
+	form.append('file', file);
+	const status = document.getElementById('doc-list');
+	status.innerHTML = '<div class="doc-empty">Uploading ' + esc(file.name) + '...</div>';
+	try {
+		const r = await fetch('/api/documents/upload', { method: 'POST', body: form });
+		const data = await r.json();
+		if (data.status === 'duplicate') {
+			status.innerHTML = '<div class="doc-empty">Already uploaded</div>';
+		}
+		refreshDocs();
+	} catch {
+		status.innerHTML = '<div class="doc-empty">Upload failed. Try again.</div>';
+	}
+	input.value = '';
+}
+
+async function deleteDoc(id) {
+	if (!window.confirm('Delete this document and all its data?')) return;
+	try {
+		await fetch('/api/documents/' + id, { method: 'DELETE' });
+		refreshDocs();
+		document.getElementById('doc-answer').innerHTML = '';
+		document.getElementById('doc-sources').innerHTML = '';
+	} catch { /* ignore */ }
+}
+
+async function askDocs() {
+	const query = document.getElementById('doc-query').value.trim();
+	if (!query) return;
+	const btn = document.getElementById('doc-ask-btn');
+	const answerEl = document.getElementById('doc-answer');
+	const sourcesEl = document.getElementById('doc-sources');
+	btn.disabled = true;
+	answerEl.innerHTML = '<div class="loading">Searching documents...</div>';
+	sourcesEl.innerHTML = '';
+
+	try {
+		const r = await fetch('/api/documents/ask', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ question: query })
+		});
+		if (!r.ok) throw new Error(r.status + ' ' + r.statusText);
+		const data = await r.json();
+		answerEl.innerHTML = '<div class="doc-answer">' + esc(data.answer || 'No answer') + '</div>';
+
+		if (data.sources && data.sources.length) {
+			sourcesEl.innerHTML = '<div style="font-size:10px;color:var(--muted);margin-top:6px;text-transform:uppercase;letter-spacing:.5px">Retrieved from ' + data.sources.length + ' sources</div>' +
+				data.sources.map((s, i) =>
+					'<div class="doc-source" onclick="toggleSource(' + i + ')">' +
+						'<div class="doc-source-header">' +
+							'<span>📎 ' + esc(s.file) + ' → page ' + s.page + '</span>' +
+							'<span style="color:var(--muted)">▾</span>' +
+						'</div>' +
+						'<div class="doc-source-snippet" id="src-' + i + '">' + esc(s.snippet) + '</div>' +
+					'</div>'
+				).join('');
+		} else {
+			sourcesEl.innerHTML = '<div style="font-size:11px;color:var(--muted);margin-top:6px">No relevant sources found</div>';
+		}
+	} catch (e) {
+		answerEl.innerHTML = '<div class="doc-answer" style="color:var(--red)">Error: ' + friendlyError(e.message) + '</div>';
+	}
+	btn.disabled = false;
+}
+
+function toggleSource(idx) {
+	const el = document.getElementById('src-' + idx);
+	if (el) el.classList.toggle('show');
+}
+
 /* ── Init ── */
 refreshGPU();
 refreshHealth();
 refreshModels();
+refreshDocs();
 setInterval(refreshGPU, 5000);
 setInterval(refreshHealth, 10000);
+setInterval(refreshDocs, 15000);
 </script>
 </body>
 </html>

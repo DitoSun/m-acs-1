@@ -31,8 +31,10 @@ services:
       - OLLAMA_URL=http://ollama:11434
       - GPU_METRICS_FILE=/data/gpu.json
       - METRICS_STALE_SECONDS=5
+      - RAG_DB_PATH=/rag/rag.db
     volumes:
       - host_metrics:/data:ro
+      - rag_data:/rag
     depends_on:
       - ollama
     restart: unless-stopped
@@ -46,6 +48,7 @@ services:
 volumes:
   ollama_data:
   # webui_data:
+  rag_data:
   host_metrics:
     driver: local
     driver_opts:

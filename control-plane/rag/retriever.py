@@ -128,3 +128,37 @@ def format_sources(chunks: list[dict]) -> list[dict]:
                 "snippet": snippet,
             })
     return sources
+
+
+def group_by_file(chunks: list[dict]) -> list[dict]:
+    """Group retrieved chunks by source file, deduplicated by content.
+
+    Returns:
+        [{"file": str, "page": int, "chunks": [{"content": str, "tokens": int, "score": float}, ...]}, ...]
+    """
+    from collections import OrderedDict
+    groups = OrderedDict()
+    seen_content = set()
+    for c in chunks:
+        key = (c["file_name"], c["page_num"])
+        # Dedup identical content (same PDF uploaded multiple times)
+        content_hash = hash(c["content"][:200])
+        if content_hash in seen_content:
+            continue
+        seen_content.add(content_hash)
+
+        if key not in groups:
+            groups[key] = {
+                "file": c["file_name"],
+                "page": c["page_num"],
+                "chunks": [],
+            }
+        groups[key]["chunks"].append({
+            "content": c["content"],
+            "tokens": c["tokens"],
+            "score": c["score"],
+        })
+    # Sort groups by best score
+    result = list(groups.values())
+    result.sort(key=lambda g: min(ch["score"] for ch in g["chunks"]))
+    return result

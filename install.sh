@@ -28,6 +28,32 @@ info() { echo -e "  ${CYAN}[·]${NC} $1"; }
 warn() { echo -e "  ${ORANGE}[!]${NC} $1"; }
 step() { echo ""; echo -e "${BOLD}── $1 ──${NC}"; }
 
+# Version
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+M_ACS_VERSION="$(cat "$SCRIPT_DIR/VERSION" 2>/dev/null || echo "0.1.0")"
+
+# Offline install: if release tarball is alongside install.sh, verify and extract
+if [ -f "$SCRIPT_DIR/m-acs-${M_ACS_VERSION}.tar.gz" ] || ls "$SCRIPT_DIR"/m-acs-*.tar.gz 2>/dev/null | head -1 | grep -q .; then
+    TARBALL="$(ls "$SCRIPT_DIR"/m-acs-*.tar.gz 2>/dev/null | head -1)"
+    CHECKSUM_FILE="${TARBALL}.sha256"
+    if [ -f "$CHECKSUM_FILE" ]; then
+        info "Verifying release tarball integrity..."
+        cd "$SCRIPT_DIR"
+        if sha256sum -c "$CHECKSUM_FILE" 2>/dev/null; then
+            ok "Release tarball integrity verified"
+        else
+            fail "Checksum mismatch! ${TARBALL} may be corrupted."
+        fi
+        cd "$OLDPWD"
+    fi
+    info "Extracting release tarball for offline install..."
+    tar -xzf "$TARBALL" -C /tmp
+    INSTALL_SRC="/tmp/m-acs-${M_ACS_VERSION}"
+    ok "Release ${M_ACS_VERSION} extracted"
+else
+    INSTALL_SRC="$SCRIPT_DIR"
+fi
+
 net_ok()   { echo -e "    ${GREEN}✓${NC} $1"; }
 net_fail() { echo -e "    ${RED}✗${NC} $1"; }
 

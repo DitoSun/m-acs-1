@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.bak
+*.backup
+*.backup.meta
+venv/
+.env
+test_*
+!test_full.py

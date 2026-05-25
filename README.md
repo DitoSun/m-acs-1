@@ -1,167 +1,211 @@
-# M-ACS-1 — Your Private AI Server
+# M-ACS-1 — Professional Cognition Operating Environment
 
-**把一台 Ubuntu 电脑变成你私有的 AI 服务器。**
+**Your private document intelligence appliance — deploy on any NVIDIA GPU machine in one command.**
 
-插电，运行一条命令，打开浏览器，开始聊天。不需要配置云服务，不需要注册账号，不需要折腾 GPU 驱动。
+M-ACS-1 is not a chatbot. It is a complete **Professional Cognition Operating Environment**: a locally deployed system where professional users upload documents, ask questions, organize evidence, build investigations, and control their analytical workflow — with AI used exclusively for retrieval.
 
 ```
-裸 Ubuntu 机器
-    ↓ git clone && sudo ./install.sh
+裸 Ubuntu + NVIDIA 机器
+    ↓ sudo ./install.sh
     ↓ ~15 分钟
 浏览器打开 http://localhost:8080
-    ↓ 点一下装模型
-开始对话
+    ↓ 上传文档 → 提问 → 分析
 ```
 
 ---
 
-## 为什么做这个
+## Architecture Overview
 
-本地 AI 已经足够好了，但部署体验还很糟糕。
+```
+                    ┌─────────────────────────────────────┐
+                    │      Professional Cognition Layer     │
+                    │  retrieval → evidence → topology     │
+                    │  attention → flow → review → closure │
+                    │  coordination → landscape → energy   │
+                    └─────────────────────────────────────┘
+                                      │
+                    ┌─────────────────────────────────────┐
+                    │      Operational System Layer        │
+                    │  diagnostics → startup → recovery   │
+                    │  backup → preflight → support       │
+                    └─────────────────────────────────────┘
+                                      │
+              ┌───────────────────────┴───────────────────────┐
+              │                                               │
+    ┌─────────────────────┐                    ┌─────────────────────┐
+    │   Ollama (AI Engine) │                    │  Control Plane      │
+    │   local models       │                    │  Python FastAPI     │
+    │   RAG embeddings     │                    │  sqlite-vec vectorDB│
+    └─────────────────────┘                    └─────────────────────┘
+```
 
-如果你想在本地跑 Llama 或 Qwen，你需要：
-1. 搞懂 NVIDIA 驱动和 CUDA 版本
-2. 安装 Docker 并配置 GPU 加速
-3. 手动拉 Ollama、配 systemd、写 docker-compose
-4. 装个 Open WebUI 或者自己写前端
-5. 每次想换个模型都要敲命令
+### Design Principles
 
-**这个过程对绝大多数人来说不可接受。** M-ACS-1 把这 5 步变成了一条命令。
+| Principle | Meaning |
+|---|---|
+| **Human reasons** | All analysis decisions belong to the user |
+| **AI retrieves** | AI only finds relevant content from documents |
+| **System stays deterministic** | Same input → same output, every time |
+| **Coherence > Capability** | No feature expansion beyond cognition ergonomics |
+
+---
+
+## Features
+
+### Cognition Layer (8 integrated systems)
+
+| Layer | Function |
+|---|---|
+| **Retrieval** | RAG with token-budget, section-aware chunking, cross-query frequency |
+| **Evidence** | Compare, pin, copy, source attribution, relevance scoring |
+| **Topology** | Cross-document section mapping, cross-topic relationship view |
+| **Attention** | Hot sections, unresolved filtering, compact mode, collapsed repetition |
+| **Flow** | Query trail, topic branching, pivot detection, investigation timeline |
+| **Review** | Per-chunk + per-query review (○→✓), review progress tracking |
+| **Closure** | Open questions, milestones, branch lifecycle (reviewing→stable→done) |
+| **Coordination** | Branch overview, energy signals, fatigue warnings, landscape bars |
+
+### Operational Layer
+
+| Feature | Endpoint |
+|---|---|
+| System diagnostics | `GET /api/system/diagnostics` |
+| Startup integrity (6 checks) | `GET /api/system/startup` |
+| Deployment preflight (5 checks) | `GET /api/system/preflight` |
+| Backup with version metadata | `GET /api/system/backup` |
+| Backup listing with version history | `GET /api/system/backups` |
+| Safe reset (docs / full) | `POST /api/system/reset` |
+| Support bundle export | `GET /api/system/support-bundle` |
+
+### Supported Models
+
+| Model | Size | Type |
+|---|---|---|
+| `qwen2.5:0.5b` | 397 MB | Fast test / Chinese |
+| `llama3.2:3b` | ~2 GB | Balanced general |
+| `deepseek-coder:6.7b` | ~4 GB | Code |
+| `qwen2.5:7b` | ~4 GB | Chinese / general |
+| `llama3.1:8b` | ~4.7 GB | Best quality |
+| `bge-m3` | ~2 GB | Embeddings (RAG) |
 
 ---
 
 ## Quick Start
 
-### 你需要
+### Requirements
 
-- 一台装了 **Ubuntu 24.04** 的电脑
-- 一块 **NVIDIA 显卡**
-- 能联网
+- **Ubuntu 22.04 or 24.04** (x86_64)
+- **NVIDIA GPU** with CUDA-compatible driver
+- **Network** (for first-time install; offline install supported)
 
-### 安装
+### Installation
 
 ```bash
+# Online install
+curl -fsSL https://raw.githubusercontent.com/DitoSun/m-acs-1/master/install.sh | sudo bash
+
+# Or from release tarball
 git clone https://github.com/DitoSun/m-acs-1.git
 cd m-acs-1
 sudo ./install.sh
 ```
 
-安装过程是自动的：
-1. 检测你的显卡型号
-2. 安装 NVIDIA 驱动（如果需要重启会提示你）
-3. 安装 Docker
-4. 配置 GPU 容器加速
-5. 启动 AI 引擎 + 控制面板
-6. 设置开机自启
+Installation is fully automated:
+1. Detect GPU and install NVIDIA driver (with reboot prompt if needed)
+2. Install Docker with GPU support
+3. Start Ollama + Control Plane containers
+4. Set up auto-start on boot
 
-### 开始使用
+### First Use
 
-打开浏览器访问 **http://localhost:8080**
+Open **http://localhost:8080** in your browser.
 
-你会看到：
-
-```
-┌─ M-ACS-1 Dashboard ─────────────────────┐
-│  GPU Monitor          System Health     │
-│  ─────────────        ─────────────     │
-│  温度 50°C            AI Engine ● run   │
-│  显存 3.2/8 GB        Dashboard ● run   │
-│                                         │
-│  Models                                 │
-│  ─────────────                          │
-│  [Quick Start] [Balanced] [Coding]      │
-│  [Chinese]     [High Quality]           │
-│                                         │
-│  点一下 → 自动安装 → 开始聊天            │
-└─────────────────────────────────────────┘
-```
-
-点 **Quick Start**，等一两分钟，模型就装好了。然后展开 **Chat** 开始对话。
+1. Click a recommended model (e.g., Quick Start → `qwen2.5:0.5b`)
+2. Wait for download (397 MB for quick test)
+3. Upload a PDF document
+4. Ask questions — see AI answers with source citations
+5. Use the ⚙ panel for system health, startup checks, backups
 
 ---
 
-## 支持硬件
+## Offline Install
 
-| 项目 | 要求 |
+```bash
+# On a machine with internet
+cd m-acs-1
+./release.sh 0.1.0
+# Produces: m-acs-0.1.0.tar.gz + m-acs-0.1.0.sha256
+
+# Copy to air-gapped machine, then:
+tar zxf m-acs-0.1.0.tar.gz
+cd m-acs-0.1.0
+sudo ./install.sh
+```
+
+The installer automatically detects a release tarball alongside `install.sh`
+and verifies SHA256 integrity before extraction.
+
+---
+
+## Operational Management
+
+```bash
+# Open the system panel in the dashboard
+# Click ⚙ in the titlebar → shows: startup checks, storage, backups, diagnostics
+
+# Create a backup
+curl -o backup.db http://localhost:8080/api/system/backup
+# → downloads m-acs-backup-v0.1.0-{timestamp}.db + .meta file
+
+# Run diagnostics
+curl http://localhost:8080/api/system/diagnostics
+
+# Deployment preflight
+curl http://localhost:8080/api/system/preflight
+
+# Export support bundle
+curl -o support.json http://localhost:8080/api/system/support-bundle
+
+# Safe reset (clear all documents)
+curl -X POST http://localhost:8080/api/system/reset \
+  -H 'Content-Type: application/json' \
+  -d '{"scope": "docs"}'
+```
+
+---
+
+## Configuration
+
+| Env Variable | Default | Description |
+|---|---|---|
+| `OLLAMA_URL` | `http://ollama:11434` | Ollama service URL |
+| `RAG_DB_PATH` | `/data/rag.db` | Vector database path |
+| `RAG_EMBED_MODEL` | `bge-m3` | Embedding model for RAG |
+| `GPU_METRICS_FILE` | `/data/gpu.json` | GPU metrics from host-agent |
+| `CONTROL_PLANE_PORT` | `8080` | Dashboard port |
+
+---
+
+## Project Status
+
+| Metric | Value |
 |---|---|
-| 操作系统 | Ubuntu 22.04 或 24.04 LTS |
-| 显卡 | NVIDIA GeForce RTX 20/30/40 系列 |
-| 内存 | 建议 16 GB 以上 |
-| 硬盘 | 建议 50 GB 以上可用空间 |
-| 网络 | 首次安装需联网 |
+| Version | v0.1.0 |
+| Architecture | Single-file SPA + Python FastAPI + sqlite-vec |
+| Total LOC | ~3,400 (35% of 9,000 budget) |
+| Frontend | 1 file, ~340 lines, all CSS/JS inline |
+| Backend | 7 Python files |
+| Dependencies | 0 frontend / 8 Python |
+| Full-stack tests | 22/22 passed |
 
-暂不支持：AMD 显卡、Intel 显卡、Mac、Windows 原生。
-Windows 用户可使用 WSL2（见 FAQ）。
+### Development Philosophy
 
----
-
-## 日常使用
-
-```bash
-# 启动
-cd /opt/m-acs-1 && docker compose up -d
-
-# 停止
-cd /opt/m-acs-1 && docker compose down
-
-# 看状态
-cd /opt/m-acs-1 && make status
 ```
-
----
-
-## 中国网络用户
-
-中国大陆访问 Docker Hub 不稳定，install.sh 会自动检测网络并切换到国内镜像（阿里云 / DaoCloud），无需手动配置。
-
-模型下载速度取决于 `registry.ollama.ai` 的连通性。建议首次安装选择 **Quick Start**（397 MB），快速验证系统正常工作。
-
-如果你有 HTTP 代理：
-
-```bash
-sudo http_proxy=http://your-proxy:port ./install.sh
+User reasons.       → all analysis, judgment, workflow
+AI retrieves.       → RAG document search only
+System stays deterministic. → same input, same output
+Coherence over capability.  → freeze on v1 architecture
 ```
-
----
-
-## 常见问题
-
-> **需要多大的显存？**
-> 8 GB 显存可运行 7B 参数模型（如 Qwen 2.5 7B），24 GB 可运行 70B 模型。
-
-> **支持 AMD 显卡吗？**
-> 暂不支持。M-ACS-1 依赖 NVIDIA CUDA。
-
-> **训练模型吗？**
-> 不。M-ACS-1 只做推理（运行模型），不训练。
-
-> **模型文件存在哪？**
-> Docker 卷中，`docker compose down` 不会删除模型。删除卷才会。
-
-> **数据会传到外网吗？**
-> 不会。所有模型在本地运行，数据不离开你的电脑。
-
-> **能用 OpenAI API 吗？**
-> M-ACS-1 提供兼容 OpenAI 格式的 API，地址是 `http://localhost:8080/v1`。任何支持 OpenAI 的工具（如 Cursor、Continue.dev）都可以连接使用。
-
-更多问题见 [FAQ.md](./FAQ.md)。
-
----
-
-## 已知限制
-
-详见 [KNOWN_ISSUES.md](./KNOWN_ISSUES.md)。
-
-- 仅支持 Ubuntu + NVIDIA
-- Open WebUI（全功能聊天界面）默认不安装，需手动启用
-- 无多用户支持
-- 无知识库 / RAG 功能
-
----
-
-## 给测试用户的反馈
-
-如果你在使用中遇到问题，请填写 [FEEDBACK.md](./FEEDBACK.md) 并发给我们。你的反馈直接决定下一个版本做什么。
 
 ---
 
